@@ -24,11 +24,16 @@ jobs:
       - name: Сборка
         working-directory: android
         run: |
-          for i in 1 2 3; do
-            ./gradlew --no-daemon assembleRelease && exit 0
-            echo "Попытка $i не удалась, повтор через 30 с"; sleep 30
-          done
-          exit 1
+          # 1) обычный путь — Gradle 8.9 (скачиваем сами, с повторами)
+          if curl -fsSL --retry 8 --retry-all-errors --retry-delay 20 -o /tmp/gradle.zip \
+               https://services.gradle.org/distributions/gradle-8.9-bin.zip; then
+            unzip -q /tmp/gradle.zip -d /tmp/gradle
+            /tmp/gradle/gradle-8.9/bin/gradle --no-daemon assembleRelease && exit 0
+          fi
+          # 2) запасной путь — Gradle, предустановленный на раннере, и новый Android-плагин
+          echo "Запасной вариант: системный Gradle $(gradle --version | grep '^Gradle')"
+          sed -i "s/id 'com.android.application' version '[^']*'/id 'com.android.application' version '9.0.0'/" build.gradle
+          gradle --no-daemon assembleRelease
 
       - name: Переименование
         run: cp android/app/build/outputs/apk/release/app-release.apk Kvartaly.apk
