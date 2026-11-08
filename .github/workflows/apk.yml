@@ -23,7 +23,12 @@ jobs:
 
       - name: Сборка
         working-directory: android
-        run: ./gradlew --no-daemon assembleRelease
+        run: |
+          for i in 1 2 3; do
+            ./gradlew --no-daemon assembleRelease && exit 0
+            echo "Попытка $i не удалась, повтор через 15 с"; sleep 15
+          done
+          exit 1
 
       - name: Переименование
         run: cp android/app/build/outputs/apk/release/app-release.apk Kvartaly.apk
