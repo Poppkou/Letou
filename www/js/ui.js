@@ -97,7 +97,7 @@ G.UI = (function () {
         var d = G.ITEMS[id] || G.WEAPONS[id];
         var c = el('button', 'shopitem');
         var desc = d.desc || weaponDesc(d);
-        c.innerHTML = '<span class="si-icon">' + d.icon + '</span><span class="si-name">' + d.name + '</span><span class="si-desc">' + desc + '</span><span class="si-price">' + price(id) + '₽</span>';
+        c.innerHTML = '<span class="si-icon">' + G.Sprites.iconHTML(id, d.icon, 3) + '</span><span class="si-name">' + d.name + '</span><span class="si-desc">' + desc + '</span><span class="si-price">' + price(id) + '₽</span>';
         c.onclick = function () {
           if (!G.Interact.pay(g, price(id))) return;
           if (!p.addItem(id, 1)) { p.money += price(id); return; }
@@ -128,7 +128,7 @@ G.UI = (function () {
         var d = G.ITEMS[slot.id] || G.WEAPONS[slot.id];
         var c = el('div', 'shopitem' + (p.weapon === slot || (slot.fist && p.weapon.id === 'fist') ? ' equipped' : ''));
         var cnt = slot.ammo !== undefined ? slot.ammo + ' патр.' : slot.dur !== undefined ? 'прочн. ' + slot.dur : slot.n > 1 ? '×' + slot.n : '';
-        c.innerHTML = '<span class="si-icon">' + d.icon + '</span><span class="si-name">' + d.name + '</span><span class="si-desc">' + (d.desc || weaponDesc(d)) + '</span><span class="si-price">' + cnt + '</span>';
+        c.innerHTML = '<span class="si-icon">' + G.Sprites.iconHTML(slot.id, d.icon, 3) + '</span><span class="si-name">' + d.name + '</span><span class="si-desc">' + (d.desc || weaponDesc(d)) + '</span><span class="si-price">' + cnt + '</span>';
         var row = el('div', 'si-btns');
         if (G.WEAPONS[slot.id]) {
           var eb = el('button', 'sbtn', 'Взять'); eb.onclick = function () { p.equip(slot.fist ? null : slot); closeModal(); updateHUD(); }; row.appendChild(eb);
@@ -240,13 +240,13 @@ G.UI = (function () {
     var grid = el('div', 'classgrid');
     G.CLASSES.forEach(function (c) {
       var card = el('button', 'classcard');
-      var cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
-      drawPortrait(cv, c);
+      var cv = document.createElement('canvas'); cv.width = 96; cv.height = 96;
+      G.Render.portrait(cv, c);
       card.appendChild(cv);
       card.appendChild(el('div', 'cname', c.name));
       card.appendChild(el('div', 'cdesc', c.desc));
       card.appendChild(el('div', 'cab', '✦ ' + c.abilityName + ': ' + c.abilityDesc));
-      card.appendChild(el('div', 'cstat', '❤ ' + c.hp + ' · 💰 ' + c.money + ' · ' + c.start.map(function (s) { var d = G.ITEMS[s[0]] || G.WEAPONS[s[0]]; return d.icon; }).join(' ')));
+      card.appendChild(el('div', 'cstat', '❤ ' + c.hp + ' · 💰 ' + c.money + ' · ' + c.start.map(function (s) { var d = G.ITEMS[s[0]] || G.WEAPONS[s[0]]; return G.Sprites.iconHTML(s[0], d.icon, 2); }).join(' ')));
       card.onclick = function () { G.Audio.sfx('ui'); G.main.newRun(c.id); };
       grid.appendChild(card);
     });
@@ -293,9 +293,12 @@ G.UI = (function () {
     $('hptext').textContent = Math.ceil(Math.max(0, p.hp)) + '/' + p.maxHp + (p.armor > 0 ? ' 🛡' + Math.ceil(p.armor) : '');
     $('xpbar').style.width = (p.xp / p.xpNext() * 100) + '%';
     $('money').textContent = p.money + '₽';
-    $('floorlbl').textContent = 'Этаж ' + g.floor + ' · ур. ' + p.level;
+    var mins = (22 * 60 + Math.floor(g.time / 2)) % 1440;
+    $('floorlbl').textContent = 'ЭТАЖ ' + g.floor + ' · УР ' + p.level;
+    $('clock').textContent = '☾ ' + (mins / 60 | 0) + ':' + ('0' + mins % 60).slice(-2);
+    $('distname').textContent = g.map.district.name;
     var w = p.wdef();
-    $('wpn').innerHTML = '<span class="wi">' + w.icon + '</span><span class="wn">' + w.name + '</span><span class="wa">' + (p.weapon.ammo !== undefined ? p.weapon.ammo : p.weapon.n > 1 && w.kind === 'throw' ? '×' + p.weapon.n : p.weapon.dur !== undefined ? '⚒' + p.weapon.dur : '') + '</span>';
+    $('wpn').innerHTML = '<span class="wi">' + G.Sprites.iconHTML(p.weapon.id, w.icon, 3) + '</span><span class="wn">' + w.name + '</span><span class="wa">' + (p.weapon.ammo !== undefined ? p.weapon.ammo : p.weapon.n > 1 && w.kind === 'throw' ? '×' + p.weapon.n : p.weapon.dur !== undefined ? '⚒' + p.weapon.dur : '') + '</span>';
     var ab = $('btnAbility');
     var cdMax = { ram: 6, hack: 1, cloak: 18, focus: 20, persuade: 8, bomb: 8 }[p.cls.ability];
     ab.style.setProperty('--cd', (p.abilityCd / cdMax * 100) + '%');

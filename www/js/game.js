@@ -232,7 +232,8 @@ GP.fire = function (a, ang) {
   }
   var snd = { pistol: 'pistol', smg: 'smg', sawn: 'shotgun', rifle: 'rifle', taser: 'taser', flamer: 'flame', rocket: 'rocket' }[id] || 'pistol';
   G.Audio.sfx(snd, a.isPlayer ? 1 : 0.55);
-  if (w.kind === 'gun' && id !== 'flamer' && id !== 'taser') this.particles.push({ x: a.x + Math.cos(ang) * 0.55, y: a.y + Math.sin(ang) * 0.55, t: 0.06, max: 0.06, color: '#ffe9a0', size: 6, flash: 1 });
+  G.FX.muzzle(this, a, ang, id);
+  if (a.isPlayer) { var kk = { sawn: 5, rifle: 5, rocket: 6, smg: 1.5, pistol: 2.5, taser: 1 }[id] || 1; this.kick = { x: -Math.cos(ang) * kk, y: -Math.sin(ang) * kk }; }
   this.noise(a.x, a.y, w.noise, a, w.noise > 8);
   if (a.isPlayer) this.shake = Math.max(this.shake, id === 'sawn' || id === 'rifle' || id === 'rocket' ? 0.25 : 0.08);
 };
@@ -254,7 +255,7 @@ GP.hitDoor = function (d, dmg, a) {
     d.broken = true; d.locked = false;
     G.Audio.sfx('doorbreak');
     this.noise(d.x + 0.5, d.y + 0.5, 9, a, true);
-    this.burst(d.x + 0.5, d.y + 0.5, '#7a5230', 8);
+    G.FX.debris(this, d.x + 0.5, d.y + 0.5, '#7a5230', 12); this.shake = Math.max(this.shake, 0.25);
     this.crime(a, this.map.buildings[d.bid], 'break');
   }
 };
@@ -263,7 +264,7 @@ GP.breakWindow = function (x, y, a) {
   if (m.get(x, y) !== G.T.WINDOW) return;
   m.set(x, y, G.T.WINBROKEN);
   G.Audio.sfx('glass');
-  this.burst(x + 0.5, y + 0.5, '#bfe6ff', 10);
+  G.FX.glass(this, x + 0.5, y + 0.5);
   this.noise(x + 0.5, y + 0.5, 8, a, true);
   if (a && a.isPlayer) this.crime(a, m.buildings[m.bid[m.idx(x, y)]], 'break');
 };
@@ -293,7 +294,7 @@ GP.hitObject = function (o, dmg, a) {
   var m = this.map, b = m.buildings[o.bid] || null, self = this;
   if (o.type === 'barrel') { m.removeObj(o); this.explode(o.x + 0.5, o.y + 0.5, 2.0, a, 40); return; }
   m.removeObj(o);
-  this.burst(o.x + 0.5, o.y + 0.5, '#888', 12);
+  G.FX.debris(this, o.x + 0.5, o.y + 0.5, '#8a6a4a', 14); G.FX.dust(this, o.x + 0.5, o.y + 0.5, 5);
   G.Audio.sfx('doorbreak', 0.6);
   o.items.forEach(function (it) { self.dropItem(o.x + 0.5, o.y + 0.5, it.id, it.n, b); });
   if (o.money) this.dropMoney(o.x + 0.5, o.y + 0.5, o.money, b);
@@ -310,7 +311,7 @@ GP.hitObject = function (o, dmg, a) {
 GP.burst = function (x, y, color, n, speed) {
   for (var i = 0; i < n; i++) {
     var an = Math.random() * Math.PI * 2, s = (speed || 3) * (0.3 + Math.random());
-    this.particles.push({ x: x, y: y, vx: Math.cos(an) * s, vy: Math.sin(an) * s, t: 0.4 + Math.random() * 0.4, max: 0.8, color: color, size: 2 + Math.random() * 3 });
+    this.particles.push({ type: 'px', x: x, y: y, z: 0.4, vz: 1 + Math.random() * 2, grav: 1, vx: Math.cos(an) * s, vy: Math.sin(an) * s, t: 0.4 + Math.random() * 0.4, max: 0.8, color: color, size: 2 + Math.random() * 3 });
   }
 };
 
@@ -318,12 +319,8 @@ GP.explode = function (x, y, r, a, dmg) {
   dmg = dmg || 60;
   G.Audio.sfx('explode');
   this.shake = Math.max(this.shake, 0.6);
-  this.particles.push({ x: x, y: y, t: 0.35, max: 0.35, ring: r, color: '#ffb347' });
-  for (var i = 0; i < 26; i++) {
-    var an = Math.random() * Math.PI * 2, s = 2 + Math.random() * 6;
-    this.particles.push({ x: x, y: y, vx: Math.cos(an) * s, vy: Math.sin(an) * s, t: 0.3 + Math.random() * 0.5, max: 0.8, color: Math.random() < 0.5 ? '#ff8a2a' : '#ffd36a', size: 3 + Math.random() * 5 });
-  }
-  this.map.decals.push({ x: x, y: y, r: r * 0.6, type: 'scorch' });
+  G.FX.explosion(this, x, y, r);
+
   var self = this, m = this.map;
   this.actorsNear(x, y, r + 0.4).forEach(function (t) {
     var d = G.dist(x, y, t.x, t.y);
@@ -343,7 +340,7 @@ GP.explode = function (x, y, r, a, dmg) {
     if (v === G.T.WINDOW) this.breakWindow(tx, ty, a);
     var door = m.doors[m.idx(tx, ty)];
     if (door) { door.broken = true; door.locked = false; }
-    if (v === G.T.WALL && d2 < r * 0.75) { m.set(tx, ty, G.T.RUBBLE); this.burst(tx + 0.5, ty + 0.5, '#777', 4); }
+    if (v === G.T.WALL && d2 < r * 0.75) { m.set(tx, ty, G.T.RUBBLE); G.FX.debris(this, tx + 0.5, ty + 0.5, '#6a6662', 5); }
     var o = m.objAt[m.idx(tx, ty)];
     if (o && o.type === 'safe' && !o.opened) { o.opened = true; o.items.forEach(function (it) { self.dropItem(o.x + 0.5, o.y + 1, it.id, it.n, m.buildings[o.bid]); }); o.items = []; if (o.money) { this.dropMoney(o.x + 0.5, o.y + 1, o.money, m.buildings[o.bid]); o.money = 0; } }
     else if (o && G.OBJDEF[o.type].hp) this.hitObject(o, dmg, a);
@@ -363,7 +360,10 @@ GP.damage = function (t, dmg, a, o) {
   t.flash = 0.12;
   if (o.kx && !t.R.turret) { t.kx = (t.kx || 0) + o.kx; t.ky = (t.ky || 0) + o.ky; }
   this.float(t.x, t.y - 0.5, '-' + dmg, t.isPlayer ? '#ff5a5a' : '#fff', 12);
-  this.burst(t.x, t.y, t.R.turret ? '#ccc' : '#a01818', 4, 2);
+  var hang = a ? Math.atan2(t.y - a.y, t.x - a.x) : Math.random() * 6.28;
+  if (t.R.turret) G.FX.sparks(this, t.x, t.y - 0.2, 5); else G.FX.blood(this, t.x, t.y - 0.4, hang, Math.min(10, 3 + dmg / 5));
+  if (t.isPlayer) t.hurtT = 0.22;
+  if (a && (a.isPlayer || t.isPlayer) && (!o.bullet || dmg >= 20)) this.hitStop = Math.max(this.hitStop || 0, o.explosion ? 0 : 0.035);
   if (o.stun) { t.stun = Math.max(t.stun, o.stun); G.Audio.sfx('stun'); }
   if (o.burn) t.burn = Math.max(t.burn, 3);
   if (t.isPlayer) { G.Audio.sfx('hurt'); this.shake = Math.max(this.shake, 0.2); if (a && a !== t) t.lastAttacker = a; t.combatT = 4; }
@@ -407,8 +407,7 @@ GP.kill = function (t, a) {
   t.alive = false; t.hp = 0; t.state = 'dead'; t.deadT = 0;
   if (t.isPlayer) { G.Audio.sfx('die'); this.over = 'dead'; return; }
   G.Audio.sfx('die', 0.7);
-  this.burst(t.x, t.y, '#8a1010', 14, 3);
-  this.map.decals.push({ x: t.x, y: t.y, r: 0.45, type: 'blood' });
+  if (!t.R.turret) { G.FX.blood(this, t.x, t.y - 0.3, Math.random() * 6.28, 16); G.FX.splat(this, t.x, t.y + 0.1, 0.55); }
   var fi = this.followers.indexOf(t); if (fi >= 0) this.followers.splice(fi, 1);
   if (t.R.turret) { this.map.solid[this.map.idx(Math.floor(t.x), Math.floor(t.y))] = 0; this.explode(t.x, t.y, 1.0, a, 10); }
   var p = this.player;
@@ -462,7 +461,7 @@ GP.update = function (dt) {
     if (a.barkT > 0) { a.barkT -= dt; if (a.barkT <= 0) a.bark = null; }
     if (a.flash > 0) a.flash -= dt;
     if (a.swingT > 0) a.swingT -= adt;
-    if (a.burn > 0) { a.burn -= adt; a.burnTick = (a.burnTick || 0) - adt; if (a.burnTick <= 0) { a.burnTick = 0.5; this.damage(a, a.isPlayer && (p.traits.blast || p.cls.id === 'bomber') ? 2 : 4, null); if (Math.random() < 0.5) this.burst(a.x, a.y, '#ff8a2a', 2); } }
+    if (a.burn > 0) { a.burn -= adt; a.burnTick = (a.burnTick || 0) - adt; if (a.burnTick <= 0) { a.burnTick = 0.5; this.damage(a, a.isPlayer && (p.traits.blast || p.cls.id === 'bomber') ? 2 : 4, null); } }
     if (a.kx || a.ky) {
       a.tryMove(a.kx * adt, a.ky * adt, this);
       a.kx *= Math.pow(0.002, adt); a.ky *= Math.pow(0.002, adt);
@@ -502,16 +501,12 @@ GP.update = function (dt) {
   // огонь
   for (i = this.fires.length - 1; i >= 0; i--) {
     var f = this.fires[i]; f.t -= dt;
-    if (Math.random() < dt * 20) this.particles.push({ x: f.x + (Math.random() - 0.5) * f.r * 1.6, y: f.y + (Math.random() - 0.5) * f.r * 1.6, vx: 0, vy: -1.5, t: 0.5, max: 0.5, color: Math.random() < 0.5 ? '#ff7a2a' : '#ffcc4a', size: 4 });
     this.actorsNear(f.x, f.y, f.r).forEach(function (t) { t.burn = Math.max(t.burn, 2); if (f.owner && f.owner !== t && !t.isPlayer && t.rel < 2 && !t.grudge[f.owner.id] && f.owner.isPlayer) self.relations(t, f.owner); });
     if (f.t <= 0) this.fires.splice(i, 1);
   }
   for (i = this.smokes.length - 1; i >= 0; i--) { this.smokes[i].t -= dt; if (this.smokes[i].t <= 0) this.smokes.splice(i, 1); }
-  for (i = this.particles.length - 1; i >= 0; i--) {
-    var q = this.particles[i]; q.t -= dt;
-    if (q.vx !== undefined) { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.92; q.vy *= 0.92; }
-    if (q.t <= 0) this.particles.splice(i, 1);
-  }
+  G.FX.update(this, dt);
+  if (this.kick) { this.kick.x *= Math.pow(0.0005, dt); this.kick.y *= Math.pow(0.0005, dt); }
   for (i = this.texts.length - 1; i >= 0; i--) { this.texts[i].t -= dt; this.texts[i].y -= dt * 0.8; if (this.texts[i].t <= 0) this.texts.splice(i, 1); }
   if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 1.5);
   // подбор
@@ -548,11 +543,13 @@ GP.updateProjectiles = function (dt, slow) {
       if (m.blocksSight(tx, ty)) {
         var door = m.doors[m.idx(tx, ty)];
         if (door && b.owner && b.owner.isPlayer) this.hitDoor(door, b.dmg * 0.5, b.owner);
+        if (!b.w.fire) G.FX.sparks(this, b.x - b.vx * 0.01, b.y - b.vy * 0.01 - 0.3, 4);
         dead = true; break;
       }
       var o = m.objAt[m.idx(tx, ty)];
       if (o && G.OBJDEF[o.type].solid && !G.OBJDEF[o.type].low) {
         if (G.OBJDEF[o.type].hp) this.hitObject(o, b.dmg, b.owner);
+        if (!b.w.fire) G.FX.sparks(this, b.x, b.y - 0.3, 3);
         dead = true; break;
       }
       var list = this.actorsNear(b.x, b.y, 0.6);
@@ -567,14 +564,13 @@ GP.updateProjectiles = function (dt, slow) {
           if (w.explode) { this.explode(b.x, b.y, w.explode, b.owner, 55); dead = true; break; }
           var dmg = b.dmg;
           if (b.owner && b.owner.isPlayer && b.owner.focus) dmg *= 1;
-          this.damage(t, dmg, b.owner, { kx: b.vx / 22 * (w.knock || 1.5), ky: b.vy / 22 * (w.knock || 1.5), stun: w.stun, burn: w.fire });
+          this.damage(t, dmg, b.owner, { kx: b.vx / 22 * (w.knock || 1.5), ky: b.vy / 22 * (w.knock || 1.5), stun: w.stun, burn: w.fire, bullet: true });
           if (!w.fire) { dead = true; break; }
         }
       }
     }
     if (dead && b.w.explode) this.explode(b.x - b.vx * 0.01, b.y - b.vy * 0.01, b.w.explode, b.owner, 55);
-    if (b.w.fire && Math.random() < 0.15) this.particles.push({ x: b.x, y: b.y, vx: 0, vy: -1, t: 0.3, max: 0.3, color: '#ff9a3a', size: 5 });
-    if (b.w.explode && Math.random() < 0.6) this.particles.push({ x: b.x, y: b.y, vx: 0, vy: 0, t: 0.4, max: 0.4, color: '#aaa', size: 4 });
+    if (b.w.fire && Math.random() < 0.7) G.FX.flame(this, b.x, b.y - 0.3, 0.3);
     if (dead || b.life <= 0) {
       if (!dead && b.w.explode) this.explode(b.x, b.y, b.w.explode, b.owner, 55);
       if (b.w.fire && Math.random() < 0.1) this.fires.push({ x: b.x, y: b.y, r: 0.5, t: 1.5, owner: b.owner });

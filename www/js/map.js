@@ -18,7 +18,7 @@ var MP = G.Map.prototype;
 MP.idx = function (x, y) { return y * this.w + x; };
 MP.inb = function (x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h; };
 MP.get = function (x, y) { return this.inb(x, y) ? this.t[y * this.w + x] : T.BORDER; };
-MP.set = function (x, y, v) { if (this.inb(x, y)) this.t[y * this.w + x] = v; };
+MP.set = function (x, y, v) { if (this.inb(x, y)) { this.t[y * this.w + x] = v; if (this.dirty) this.dirty.push(x, y); } };
 MP.bAt = function (x, y) {
   x = Math.floor(x); y = Math.floor(y);
   if (!this.inb(x, y)) return null;

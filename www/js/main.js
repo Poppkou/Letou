@@ -13,7 +13,6 @@ G.main = (function () {
     G.Audio.start();
     var g = G.game;
     G.UI.toast('Этаж ' + floor + ' · ' + g.map.district.name);
-    g.missions.forEach(function (mi) { G.UI.toast('• ' + mi.text); });
     if (!running) { running = true; requestAnimationFrame(loop); }
   }
   function newRun(clsId) {
@@ -56,7 +55,8 @@ G.main = (function () {
     var dt = Math.min(0.05, (t - last) / 1000 || 0.016); last = t;
     var g = G.game;
     if (!g) return;
-    if (!G.UI.paused && !g.over) {
+    if (g.hitStop > 0) { g.hitStop -= dt; }
+    else if (!G.UI.paused && !g.over) {
       g.update(dt);
       g.interact = g.findInteract();
       if (g.player.pendingTraits > 0 && !g.traitHinted) { g.traitHinted = true; G.UI.toast('⭐ Новая черта ждёт выбора — кнопка ⭐'); }

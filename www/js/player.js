@@ -178,7 +178,7 @@ G.PlayerMethods = {
   updatePlayer: function (dt, game) {
     if (!this.alive) return;
     var inp = G.input;
-    ['cd', 'abilityCd', 'invis', 'speedT', 'drunk', 'godT', 'combatT', 'noAmmoT', 'lockMsgT'].forEach(function (k) {
+    ['cd', 'abilityCd', 'invis', 'speedT', 'drunk', 'godT', 'combatT', 'noAmmoT', 'lockMsgT', 'hurtT'].forEach(function (k) {
       if (this[k] > 0) { this[k] -= dt; if (this[k] < 0) this[k] = 0; }
     }, this);
     if (this.traits.regen && this.combatT <= 0 && this.hp < this.maxHp) { this.regenAcc = (this.regenAcc || 0) + dt; if (this.regenAcc > 1) { this.regenAcc = 0; this.hp++; } }
@@ -200,7 +200,7 @@ G.PlayerMethods = {
         self.ramHit[a.id] = 1;
         game.damage(a, 22 * self.cls.melee, self, { kx: Math.cos(self.ramAng) * 12, ky: Math.sin(self.ramAng) * 12, stun: 1.2 });
       });
-      if (Math.random() < 0.6) game.particles.push({ x: this.x, y: this.y, vx: 0, vy: 0, t: 0.25, max: 0.25, color: '#ddd', size: 5 });
+      if (Math.random() < 0.7) G.FX.dust(game, this.x, this.y + 0.2, 2);
       return;
     }
 
@@ -213,7 +213,7 @@ G.PlayerMethods = {
       this.tryMove(Math.cos(this.moveAng) * spd * dt, Math.sin(this.moveAng) * spd * dt, game);
       this.walkPh += spd * dt * 4;
       this.stepT = (this.stepT || 0) - dt;
-      if (this.stepT <= 0) { this.stepT = 0.32; G.Audio.sfx('step'); }
+      if (this.stepT <= 0) { this.stepT = 0.32; G.Audio.sfx('step'); G.FX.dust(game, this.x, this.y + 0.25, 1); }
     }
     var w = this.wdef();
     if (inp.aiming && inp.aimMag > 0.2) {
