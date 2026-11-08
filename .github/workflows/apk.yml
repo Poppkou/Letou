@@ -20,14 +20,12 @@ jobs:
           java-version: '17'
 
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.11.1'
 
       - name: Сборка
         working-directory: android
         run: |
           for i in 1 2 3; do
-            gradle --no-daemon assembleRelease && exit 0
+            ./gradlew --no-daemon assembleRelease && exit 0
             echo "Попытка $i не удалась, повтор через 30 с"; sleep 30
           done
           exit 1
