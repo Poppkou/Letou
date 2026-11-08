@@ -64,7 +64,7 @@ G.CLASSES = [
     hp: 85, speed: 1.0, melee: 0.9, acc: 0.9, stealth: 0.9, money: 220,
     start: [['knuckle']], ability: 'persuade',
     abilityName: 'Убеждение', abilityDesc: 'Ближайший NPC становится другом; друг — вступает в отряд.' },
-  { id: 'bomber', name: 'Фитиль', color: '#e07a1f', hat: 'goggles', desc: 'Подрывник. Гранаты сами собираются в кармане, взрывы ранят его вдвое слабее.',
+  { id: 'bomber', name: 'Фитиль', color: '#e07a1f', hat: 'goggles', desc: 'Подрывник. Начинает с гранатами и взрывчаткой, взрывы ранят его вдвое слабее.',
     hp: 95, speed: 1.0, melee: 1.0, acc: 0.95, stealth: 0.7, money: 30,
     start: [['bat'], ['grenade', 2], ['c4', 1]], ability: 'bomb',
     abilityName: 'Самодельная бомба', abilityDesc: 'Бросает бесплатную гранату.' }
