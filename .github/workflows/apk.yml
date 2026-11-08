@@ -1,0 +1,48 @@
+name: Сборка APK
+
+on:
+  push:
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Сборка
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Переименование
+        run: cp android/app/build/outputs/apk/release/app-release.apk Kvartaly.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kvartaly-apk
+          path: Kvartaly.apk
+
+      - name: Релиз
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Кварталы 1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: Kvartaly.apk
+          body: |
+            APK для Android 8+. Скачайте Kvartaly.apk на телефон и установите (разрешите установку из неизвестных источников).
+            Новые версии ставятся поверх старых — прогресс сохраняется.
